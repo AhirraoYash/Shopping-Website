@@ -114,26 +114,38 @@ app.post('/api/login', (req, res) => {
 // Config
 app.get('/api/config', async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Database not connected' });
-  const { data, error } = await supabase.from('config').select('*').eq('id', 1).single();
-  if (error && error.code !== 'PGRST116') return res.status(500).json({ error: 'Failed to fetch config from Supabase' });
-  if (data) return res.json({ ownerWhatsAppNumber: data.owner_whatsapp_number });
-  return res.json({ ownerWhatsAppNumber: '911234567890' });
+  try {
+    const { data, error } = await supabase.from('config').select('*').eq('id', 1).single();
+    if (error && error.code !== 'PGRST116') return res.status(500).json({ error: error.message || 'Failed to fetch config' });
+    if (data) return res.json({ ownerWhatsAppNumber: data.owner_whatsapp_number });
+    return res.json({ ownerWhatsAppNumber: '911234567890' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/api/config', authenticateToken, async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Database not connected' });
-  const ownerWhatsAppNumber = req.body.ownerWhatsAppNumber;
-  const { error } = await supabase.from('config').upsert({ id: 1, owner_whatsapp_number: ownerWhatsAppNumber });
-  if (error) return res.status(500).json({ error: 'Failed to update config in Supabase' });
-  res.json({ success: true });
+  try {
+    const ownerWhatsAppNumber = req.body.ownerWhatsAppNumber;
+    const { error } = await supabase.from('config').upsert({ id: 1, owner_whatsapp_number: ownerWhatsAppNumber });
+    if (error) return res.status(500).json({ error: error.message || 'Failed to update config' });
+    res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // Categories
 app.get('/api/categories', async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Database not connected' });
-  const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
-  if (error) return res.status(500).json({ error: 'Failed to fetch categories' });
-  return res.json(data);
+  try {
+    const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: true });
+    if (error) return res.status(500).json({ error: error.message || 'Failed to fetch categories' });
+    return res.json(data);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/categories', authenticateToken, async (req, res) => {
@@ -160,19 +172,22 @@ app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
 // Products
 app.get('/api/products', async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Database not connected' });
-  const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: 'Failed to fetch products' });
-  
-  // Transform category_id to categoryId and image_url to imageUrl for frontend
-  const products = data.map(p => ({
-    id: p.id,
-    name: p.name,
-    price: p.price,
-    details: p.details,
-    categoryId: p.category_id,
-    imageUrl: p.image_url
-  }));
-  return res.json(products);
+  try {
+    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message || 'Failed to fetch products' });
+    
+    const products = data.map(p => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      details: p.details,
+      categoryId: p.category_id,
+      imageUrl: p.image_url
+    }));
+    return res.json(products);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/products', authenticateToken, async (req, res) => {
