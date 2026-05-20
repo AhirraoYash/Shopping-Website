@@ -67,7 +67,7 @@ async function checkSupabaseConnection(): Promise<{ status: 'not_configured' | '
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
