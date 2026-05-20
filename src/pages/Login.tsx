@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
 import { toast } from 'sonner';
-import { Lock } from 'lucide-react';
+import { Lock, ArrowLeft } from 'lucide-react';
 
 export function Login() {
   const [username, setUsername] = useState('');
@@ -83,34 +83,14 @@ export function Login() {
               </button>
             </div>
 
-            <div className="relative mt-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-4 text-gray-500 font-medium tracking-wide uppercase text-xs">Or</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
+            <div className="mt-4">
               <button
                 type="button"
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    await apiService.login('admin', 'admin');
-                    toast.success('Welcome back (Demo Admin)!');
-                    navigate('/admin');
-                  } catch (err) {
-                    toast.error('Demo login failed');
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading}
-                className="flex w-full justify-center rounded-xl bg-shop-yellow py-3 px-3 text-sm font-bold text-shop-gray shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] hover:opacity-90 disabled:opacity-50 transition-colors uppercase tracking-wide"
+                onClick={() => navigate('/')}
+                className="flex items-center justify-center w-full rounded-xl py-3 px-3 text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors tracking-wide gap-2"
               >
-                Demo Owner Login
+                <ArrowLeft className="w-4 h-4" />
+                Back to Store
               </button>
             </div>
           </form>
