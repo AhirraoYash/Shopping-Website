@@ -4,6 +4,8 @@ import { Product, Category } from '../../types';
 import { toast } from 'sonner';
 import { Trash2, Edit2, Plus, Loader2, Image as ImageIcon, Save } from 'lucide-react';
 
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
 export function ProductsAdmin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -11,7 +13,7 @@ export function ProductsAdmin() {
   const [editingProd, setEditingProd] = useState<Product | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<[string | null, string | null]>([null, null]);
 
   useEffect(() => {
     loadData();
@@ -36,10 +38,10 @@ export function ProductsAdmin() {
   const handleOpenForm = (product?: Product) => {
     if (product) {
       setEditingProd(product);
-      setImagePreview(product.imageUrl || null);
+      setImagePreviews([product.imageUrl || null, product.imageUrl2 || null]);
     } else {
       setEditingProd(null);
-      setImagePreview(null);
+      setImagePreviews([null, null]);
     }
     setIsFormOpen(true);
   };
@@ -47,19 +49,23 @@ export function ProductsAdmin() {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingProd(null);
-    setImagePreview(null);
+    setImagePreviews([null, null]);
   };
   
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (index: 0 | 1) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast.error('Image size should be less than 2MB');
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        toast.error('Image size should be 5MB or less');
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setImagePreviews((current: [string | null, string | null]) => {
+          const next: [string | null, string | null] = [...current] as [string | null, string | null];
+          next[index] = reader.result as string;
+          return next;
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -75,7 +81,8 @@ export function ProductsAdmin() {
       price: Number(formData.get('price')),
       details: formData.get('details') as string,
       categoryId: formData.get('categoryId') as string,
-      imageUrl: imagePreview || undefined,
+      imageUrl: imagePreviews[0] || undefined,
+      imageUrl2: imagePreviews[1] || undefined,
     };
 
     try {
@@ -130,7 +137,7 @@ export function ProductsAdmin() {
               <label className="block text-sm font-semibold text-gray-900 mb-1">Category</label>
               <select name="categoryId" required defaultValue={editingProd?.categoryId || ''} className="w-full rounded-xl border border-gray-300 py-2.5 px-4 focus:ring-2 focus:ring-amber-500 outline-none bg-white">
                 <option value="" disabled>Select Category</option>
-                {categories.map(cat => (
+                {categories.map((cat: Category) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
@@ -143,27 +150,42 @@ export function ProductsAdmin() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Product Image (Optional)</label>
-            <div className="flex items-center gap-4">
-              {imagePreview ? (
-                <div className="relative w-24 h-24 rounded-xl border border-gray-200 overflow-hidden shrink-0 group">
-                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center transition-all cursor-pointer" onClick={() => setImagePreview(null)}>
-                    <Trash2 className="w-5 h-5 text-white" />
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Product Images (Optional)</label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[0, 1].map((index) => {
+                const slot = index as 0 | 1;
+                const preview = imagePreviews[slot];
+                const inputId = `imageUpload-${index + 1}`;
+
+                return (
+                  <div key={index} className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4">
+                    {preview ? (
+                      <div className="relative w-24 h-24 rounded-xl border border-gray-200 overflow-hidden shrink-0 group">
+                        <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center transition-all cursor-pointer" onClick={() => setImagePreviews((current: [string | null, string | null]) => {
+                          const next: [string | null, string | null] = [...current] as [string | null, string | null];
+                          next[slot] = null;
+                          return next;
+                        })}>
+                          <Trash2 className="w-5 h-5 text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-24 h-24 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+                        <ImageIcon className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-900 mb-2">Image {index + 1}</p>
+                      <input type="file" accept="image/*" id={inputId} className="hidden" onChange={handleImageChange(slot)} />
+                      <label htmlFor={inputId} className="inline-block bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
+                        Choose Photo
+                      </label>
+                      <p className="text-xs text-gray-500 mt-2">Max limit: 5MB. JPEG and PNG accepted.</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="w-24 h-24 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
-                  <ImageIcon className="w-8 h-8 text-gray-400" />
-                </div>
-              )}
-              <div className="flex-1">
-                <input type="file" accept="image/*" id="imageUpload" className="hidden" onChange={handleImageChange} />
-                <label htmlFor="imageUpload" className="inline-block bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-gray-50 transition-colors shadow-sm">
-                  Choose Photo
-                </label>
-                <p className="text-xs text-gray-500 mt-2">Max limit: 2MB. Jpeg, Png accepted.</p>
-              </div>
+                );
+              })}
             </div>
           </div>
           

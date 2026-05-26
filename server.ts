@@ -13,6 +13,7 @@ dotenv.config();
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabaseStorageBucket = process.env.SUPABASE_STORAGE_BUCKET || 'product-images';
+const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
 
 // We use the service role key to bypass RLS for admin operations if needed,
 // but for public endpoints we could use anon key. We'll use service role here 
@@ -36,6 +37,9 @@ async function uploadProductImage(dataUrl: string): Promise<{ url?: string; erro
   if (!supabase) return { error: 'Supabase is not configured' };
   const parsed = parseDataUrl(dataUrl);
   if (!parsed) return { error: 'Invalid image format' };
+  if (parsed.data.byteLength > MAX_PRODUCT_IMAGE_BYTES) {
+    return { error: 'Image size should be 5MB or less' };
+  }
 
   const filePath = `products/${crypto.randomUUID()}.${parsed.extension}`;
   const { error } = await supabase.storage
@@ -182,7 +186,8 @@ app.get('/api/products', async (req, res) => {
       price: p.price,
       details: p.details,
       categoryId: p.category_id,
-      imageUrl: p.image_url
+      imageUrl: p.image_url,
+      imageUrl2: p.image_url_2
     }));
     return res.json(products);
   } catch (err: any) {
@@ -193,6 +198,7 @@ app.get('/api/products', async (req, res) => {
 app.post('/api/products', authenticateToken, async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Database not connected' });
   let imageUrl = req.body.imageUrl;
+  let imageUrl2 = req.body.imageUrl2;
   
   if (isDataUrl(imageUrl)) {
     const uploadRes = await uploadProductImage(imageUrl);
@@ -200,12 +206,19 @@ app.post('/api/products', authenticateToken, async (req, res) => {
     imageUrl = uploadRes.url;
   }
 
+  if (isDataUrl(imageUrl2)) {
+    const uploadRes = await uploadProductImage(imageUrl2);
+    if (uploadRes.error) return res.status(500).json({ error: uploadRes.error });
+    imageUrl2 = uploadRes.url;
+  }
+
   const { data, error } = await supabase.from('products').insert([{
     name: req.body.name,
     price: req.body.price,
     details: req.body.details,
     category_id: req.body.categoryId,
-    image_url: imageUrl || null
+    image_url: imageUrl || null,
+    image_url_2: imageUrl2 || null
   }]).select().single();
 
   if (error) return res.status(500).json({ error: 'Failed to create product' });
@@ -216,18 +229,26 @@ app.post('/api/products', authenticateToken, async (req, res) => {
     price: data.price,
     details: data.details,
     categoryId: data.category_id,
-    imageUrl: data.image_url
+    imageUrl: data.image_url,
+    imageUrl2: data.image_url_2
   });
 });
 
 app.put('/api/products/:id', authenticateToken, async (req, res) => {
   if (!supabase) return res.status(500).json({ error: 'Database not connected' });
   let imageUrl = req.body.imageUrl;
+  let imageUrl2 = req.body.imageUrl2;
   
   if (isDataUrl(imageUrl)) {
     const uploadRes = await uploadProductImage(imageUrl);
     if (uploadRes.error) return res.status(500).json({ error: uploadRes.error });
     imageUrl = uploadRes.url;
+  }
+
+  if (isDataUrl(imageUrl2)) {
+    const uploadRes = await uploadProductImage(imageUrl2);
+    if (uploadRes.error) return res.status(500).json({ error: uploadRes.error });
+    imageUrl2 = uploadRes.url;
   }
 
   const updateData: any = {};
@@ -236,6 +257,7 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
   if (req.body.details !== undefined) updateData.details = req.body.details;
   if (req.body.categoryId) updateData.category_id = req.body.categoryId;
   if (imageUrl !== undefined) updateData.image_url = imageUrl;
+  if (imageUrl2 !== undefined) updateData.image_url_2 = imageUrl2;
 
   const { data, error } = await supabase.from('products').update(updateData).eq('id', req.params.id).select().single();
   
@@ -246,7 +268,8 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
     price: data.price,
     details: data.details,
     categoryId: data.category_id,
-    imageUrl: data.image_url
+    imageUrl: data.image_url,
+    imageUrl2: data.image_url_2
   });
 });
 

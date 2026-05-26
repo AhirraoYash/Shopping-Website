@@ -50,6 +50,9 @@ export function Catalog() {
     setSelectedProduct(null);
   };
 
+  const getProductImages = (product: Product) => [product.imageUrl, product.imageUrl2].filter((image): image is string => Boolean(image));
+  const getPrimaryProductImage = (product: Product) => getProductImages(product)[0] || null;
+
   const filteredProducts = products.filter((p) => {
     const matchesCategory = activeCategory === 'all' || p.categoryId === activeCategory;
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -122,9 +125,9 @@ export function Catalog() {
               onClick={() => setSelectedProduct(product)}
               className="cursor-pointer bg-white rounded-[16px] overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] border border-slate-100 flex flex-col transition-transform hover:-translate-y-1 hover:shadow-md duration-300"
             >
-              {product.imageUrl ? (
+              {getPrimaryProductImage(product) ? (
                 <div className="h-28 sm:h-36 w-full bg-slate-200 border-b border-slate-100 flex-shrink-0">
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                  <img src={getPrimaryProductImage(product) as string} alt={product.name} className="w-full h-full object-cover" />
                 </div>
               ) : (
                 <div className="h-28 sm:h-36 w-full bg-slate-200 border-b border-slate-100 flex items-center justify-center text-slate-400 text-xs italic flex-shrink-0">
@@ -174,9 +177,17 @@ export function Catalog() {
             </button>
             
             {/* Modal Image */}
-            {selectedProduct.imageUrl ? (
-              <div className="w-full h-64 sm:h-80 bg-slate-100 relative">
-                <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="w-full h-full object-cover" />
+            {getProductImages(selectedProduct).length > 0 ? (
+              <div className="w-full h-64 sm:h-80 bg-slate-100 overflow-x-auto snap-x snap-mandatory flex scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+                {getProductImages(selectedProduct).map((image, index) => (
+                  <div key={index} className="w-full h-full flex-shrink-0 snap-start">
+                    <img
+                      src={image}
+                      alt={`${selectedProduct.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="w-full h-64 sm:h-80 bg-slate-100 flex items-center justify-center text-slate-400 italic">

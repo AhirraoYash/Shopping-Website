@@ -10,6 +10,7 @@ export interface Product {
   details: string;
   categoryId: string;
   imageUrl?: string;
+  imageUrl2?: string;
 }
 
 export interface Config {

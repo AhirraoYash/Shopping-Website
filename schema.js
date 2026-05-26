@@ -25,6 +25,7 @@ CREATE TABLE products (
   details TEXT,
   category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
   image_url TEXT,
+  image_url_2 TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()) NOT NULL
 );
 
